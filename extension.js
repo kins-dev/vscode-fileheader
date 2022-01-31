@@ -6,27 +6,8 @@
  */
 
 var vscode = require('vscode');
+var strftime = require('strftime');
 
-Date.prototype.format = function (format) {
-    var o = {
-        "M+": this.getMonth() + 1, //month
-        "d+": this.getDate(), //day
-        "h+": this.getHours(), //hour
-        "m+": this.getMinutes(), //minute
-        "s+": this.getSeconds(), //second
-        "q+": Math.floor((this.getMonth() + 3) / 3), //quarter
-        "S": this.getMilliseconds() //millisecond
-    }
-    if (/(y+)/.test(format)) {
-        format = format.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
-    }
-    for (var k in o) {
-        if (new RegExp("(" + k + ")").test(format)) {
-            format = format.replace(RegExp.$1, RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" + o[k]).length));
-        }
-    }
-    return format;
-}
 
 function activate(context) {
     var config = vscode.workspace.getConfiguration('fileheader');
@@ -44,13 +25,15 @@ function activate(context) {
                 
         var line = editor.selection.active.line;
         editor.edit(function (editBuilder) {
-            var time = new Date().format("yyyy-MM-dd hh:mm:ss");
+            var time = strftime(config.DateString);
             var data = {
                 author: config.Author,
-                email: config.Email,
                 lastModifiedBy: config.LastModifiedBy,
                 createTime: time,
                 updateTime: time
+            };
+            for (const key in config.Items) {
+                data[key] = config.Items[key];
             }
             try {
                 var tpl = new template(config.tpl).render(data);;
@@ -64,8 +47,9 @@ function activate(context) {
     });
 
     context.subscriptions.push(disposable);
-    vscode.workspace.onDidSaveTextDocument(function (file) {
-        setTimeout(function () {
+    
+    vscode.workspace.onWillSaveTextDocument(function (file) {
+        
             try {
                 var f = file;
                 var editor = vscode.editor || vscode.window.activeTextEditor;
@@ -75,7 +59,6 @@ function activate(context) {
                 var authorText = null;
                 var lastTimeRange = null;
                 var lastTimeText = null;
-                var diff = -1;
                 var lineCount = document.lineCount;
                 var comment = false;
                 for (var i = 0; i < lineCount; i++) {
@@ -102,13 +85,9 @@ function activate(context) {
                                 authorText=' * @Last Modified by: ' + config.LastModifiedBy;
                             }
                         } else if (line.indexOf('@Last\ Modified\ time') > -1) {//最后修改时间
-                            var time = line.replace('@Last\ Modified\ time:', '').replace('*', '');
-                            var oldTime = new Date(time);
-                            var curTime = new Date();
-                            var diff = (curTime - oldTime) / 1000;
                             var replaceTimeReg = /^(.*?)(@Last Modified time:)(\s*)(.*)$/;
                             lastTimeRange = range;
-                            var currTimeFormate = curTime.format("yyyy-MM-dd hh:mm:ss");
+                            var currTimeFormate = strftime(config.DateString);
                             if (replaceTimeReg.test(lineTextOriginal)) {
                                 lastTimeText = lineTextOriginal.replace(replaceTimeReg, function(match, p1, p2, p3){
                                     return p1+p2+p3+currTimeFormate;
@@ -122,20 +101,19 @@ function activate(context) {
                         }
                     }
                 }
-                if ((authorRange != null) && (lastTimeRange != null) && (diff > 20)) {
-                    setTimeout(function () {
-                        editor.edit(function (edit) {
-                            edit.replace(authorRange, authorText);
-                            edit.replace(lastTimeRange, lastTimeText);
-                        });
-                        document.save();
-                    }, 200);
+                if ((authorRange != null) && (lastTimeRange != null)) {
+
+                    editor.edit(function (edit) {
+                        edit.replace(authorRange, authorText);
+                        edit.replace(lastTimeRange, lastTimeText);
+                    });
+                
                 }
 
             } catch (error) {
                 console.error(error);
             }
-        }, 200);
+        
     });
 }
 

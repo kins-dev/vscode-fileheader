@@ -8,11 +8,11 @@
         "name": "mikey.zhaopeng",
         "url": "http://zhaopeng.me"
     },
-        "galleryBanner": {
+    "galleryBanner": {
         "color": "#3B4859",
         "theme": "dark"
     },
-        "repository": {
+    "repository": {
         "type": "git",
         "url": "https://github.com/zhaopengme/vscode-fileheader.git"
     },
@@ -29,13 +29,13 @@
     ],
     "activationEvents": [
         "onCommand:extension.fileheader",
-        "onLanguage:javascript"
+        "onStartupFinished"
     ],
     "main": "./extension",
     "contributes": {
         "configuration": {
             "type": "object",
-            "title": "File header Configuration",
+            "title": "File Header Configuration",
             "properties": {
                 "fileheader.Author": {
                     "type": "string",
@@ -52,6 +52,21 @@
                     "type": "string",
                     "default": "mikey.zhaopeng",
                     "description": "By default, update file  username."
+                },
+                "fileheader.Items": {
+                    "type":"object",
+                    "editPresentation": "multilineText",
+                    "default": {},
+                    "additionalProperties": {
+                        "type": "string",
+                        "description": "Items to fill in"
+                    },
+                    "description": "list of items to fill in."
+                },
+                "fileheader.DateString": {
+                    "type": "string",
+                    "default": "%D %r",
+                    "markdownDescription": "Format for the date string. (See <https://github.com/samsonjs/strftime#supported-specifiers>)"
                 }
             }
         },
@@ -69,10 +84,11 @@
             }
         ]
     },
-    "scripts": {
-        "postinstall": "node ./node_modules/vscode/bin/install"
-    },
     "devDependencies": {
-        "vscode": "^0.11.0"
+        "@types/vscode": "^1.63.1",
+        "strftime": "^0.10.1"
+    },
+    "dependencies": {
+        "strftime": "^0.10.1"
     }
 }
