@@ -1,0 +1,6 @@
+╭────────────────────────────────╮
+│ ◆ Author:   {author}           │
+│ ◆ Email:    {email}            │
+│ ◆ Created:  {date}             │
+│ ▶ Modified: {date} by {author} │
+╰────────────────────────────────╯

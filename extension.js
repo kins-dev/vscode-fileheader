@@ -13,8 +13,9 @@ function activate(context) {
     var config = vscode.workspace.getConfiguration('fileheader');
     console.log('"vscode-fileheader" is now active!');
     var disposable = vscode.commands.registerCommand('extension.fileheader', function () {
+        config = vscode.workspace.getConfiguration('fileheader');
         var editor = vscode.editor || vscode.window.activeTextEditor;
-                                    
+
         /*
         * @Author: huangyuan
         * @Date: 2017-02-28 17:51:35
@@ -22,7 +23,7 @@ function activate(context) {
         * @Last Modified time: 2017-02-28 17:51:35
         * @description: 在当前行插入,而非在首行插入
         */
-                
+
         var line = editor.selection.active.line;
         editor.edit(function (editBuilder) {
             var time = strftime(config.DateString);
@@ -47,73 +48,76 @@ function activate(context) {
     });
 
     context.subscriptions.push(disposable);
-    
+
     vscode.workspace.onWillSaveTextDocument(function (file) {
-        
-            try {
-                var f = file;
-                var editor = vscode.editor || vscode.window.activeTextEditor;
-                var document = editor.document;
-                var isReturn = false;
-                var authorRange = null;
-                var authorText = null;
-                var lastTimeRange = null;
-                var lastTimeText = null;
-                var lineCount = document.lineCount;
-                var comment = false;
-                for (var i = 0; i < lineCount; i++) {
-                    var linetAt = document.lineAt(i);
-                    
-                    var lineTextOriginal = linetAt.text;
-                    var line = linetAt.text;
-                    line = line.trim();
-                    if (line.startsWith("/*") && !line.endsWith("*/")) {//是否以 /* 开头
-                        comment = true;//表示开始进入注释
-                    } else if (comment) {
-                        if (line.endsWith("*/")) {
-                            comment = false;//结束注释
+        config = vscode.workspace.getConfiguration('fileheader');
+
+
+        try {
+            var f = file;
+            var editor = vscode.editor || vscode.window.activeTextEditor;
+            var document = editor.document;
+            var isReturn = false;
+            var authorRange = null;
+            var authorText = null;
+            var lastTimeRange = null;
+            var lastTimeText = null;
+            var lineCount = document.lineCount;
+            var comment = false;
+
+            for (var i = 0; i < lineCount; i++) {
+                var linetAt = document.lineAt(i);
+
+                var lineTextOriginal = linetAt.text;
+                var line = linetAt.text;
+                line = line.trim();
+                if (line.startsWith("/*") && !line.endsWith("*/")) {//是否以 /* 开头
+                    comment = true;//表示开始进入注释
+                } else if (comment) {
+                    if (line.endsWith("*/")) {
+                        comment = false;//结束注释
+                    }
+                    var range = linetAt.range;
+                    if (line.indexOf('@Last\ Modified\ by') > -1) {//表示是修改人
+                        var replaceAuthorReg = /^(.*?)(@Last Modified by:)(\s*)(\S*)$/;
+                        authorRange = range;
+                        if (replaceAuthorReg.test(lineTextOriginal)) {
+                            authorText = lineTextOriginal.replace(replaceAuthorReg, function (match, p1, p2, p3) {
+                                return p1 + p2 + p3 + config.LastModifiedBy;
+                            });
+                        } else {
+                            authorText = ' * @Last Modified by: ' + config.LastModifiedBy;
                         }
-                        var range = linetAt.range;
-                        if (line.indexOf('@Last\ Modified\ by') > -1) {//表示是修改人
-                            var replaceAuthorReg = /^(.*?)(@Last Modified by:)(\s*)(\S*)$/;
-                            authorRange = range;
-                            if (replaceAuthorReg.test(lineTextOriginal)) {
-                                authorText = lineTextOriginal.replace(replaceAuthorReg, function(match, p1, p2, p3){
-                                    return p1+p2+p3+config.LastModifiedBy;
-                                });
-                            } else {
-                                authorText=' * @Last Modified by: ' + config.LastModifiedBy;
-                            }
-                        } else if (line.indexOf('@Last\ Modified\ time') > -1) {//最后修改时间
-                            var replaceTimeReg = /^(.*?)(@Last Modified time:)(\s*)(.*)$/;
-                            lastTimeRange = range;
-                            var currTimeFormate = strftime(config.DateString);
-                            if (replaceTimeReg.test(lineTextOriginal)) {
-                                lastTimeText = lineTextOriginal.replace(replaceTimeReg, function(match, p1, p2, p3){
-                                    return p1+p2+p3+currTimeFormate;
-                                });
-                            } else {
-                                lastTimeText=' * @Last Modified time: ' + currTimeFormate;
-                            }
-                        }
-                        if (!comment) {
-                            break;//结束
+                    } else if (line.indexOf('@Last\ Modified\ time') > -1) {//最后修改时间
+                        var replaceTimeReg = /^(.*?)(@Last Modified time:)(\s*)(.*)$/;
+                        lastTimeRange = range;
+                        var currTimeFormate = strftime(config.DateString);
+                        if (replaceTimeReg.test(lineTextOriginal)) {
+                            lastTimeText = lineTextOriginal.replace(replaceTimeReg, function (match, p1, p2, p3) {
+                                return p1 + p2 + p3 + currTimeFormate;
+                            });
+                        } else {
+                            lastTimeText = ' * @Last Modified time: ' + currTimeFormate;
                         }
                     }
+                    if (!comment) {
+                        break;//结束
+                    }
                 }
-                if ((authorRange != null) && (lastTimeRange != null)) {
-
-                    editor.edit(function (edit) {
-                        edit.replace(authorRange, authorText);
-                        edit.replace(lastTimeRange, lastTimeText);
-                    });
-                
-                }
-
-            } catch (error) {
-                console.error(error);
             }
-        
+            if ((authorRange != null) && (lastTimeRange != null)) {
+
+                editor.edit(function (edit) {
+                    edit.replace(authorRange, authorText);
+                    edit.replace(lastTimeRange, lastTimeText);
+                });
+
+            }
+
+        } catch (error) {
+            console.error(error);
+        }
+
     });
 }
 
